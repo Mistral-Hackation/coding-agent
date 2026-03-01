@@ -1,0 +1,13 @@
+/target
+*.py
+*.blend
+*.blend*
+*.log
+.gemini/
+gha-creds-*.json
+blender_automation.log
+PEDAGOGICAL_GUIDE.md
+.idea/
+.output/
+output/
+farid
