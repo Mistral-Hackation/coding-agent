@@ -47,6 +47,11 @@ We tested two major directions before locking the current execution path:
 - **Zed-style IDE path:** The Zed-style IDE flow works and those artifacts remain available in our project history, but the core product now focuses on the automated agentic loop. The default path is now auto-generation with review + self-correction, which is what we consider the primary production approach.
 - **Zed-style artifact archive:** Relevant Zed-era engineering artifacts are archived at [github.com/Anthony-Eid/zed/pull/2](https://github.com/Anthony-Eid/zed/pull/2).
 
+## Acknowledgments
+
+- Thanks to **Sarah Carthy** and the **Weights & Biases** team at [https://wandb.ai/](https://wandb.ai/) for support and resources during the hackathon.
+- Thanks to **Nelson Proia** from **Mistral** for support during the hackathon.
+
 ## Knowledge Persistence and Policy Governance
 
 The agent loop is designed to learn fast **and** stay boringly consistent. It uses web search only as a bounded input source, then turns validated findings into internal knowledge for future runs.
