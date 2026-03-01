@@ -1,3 +1,5 @@
+![Cadstudios Banner](./cadstudios.jpg)
+
 # 🤖 build123d CAD Code Generator
 
 A **Multi-Agent Orchestrator** for autonomous parametric CAD code generation using [build123d](https://build123d.readthedocs.io/).
