@@ -1,6 +1,6 @@
 # 🤖 build123d CAD Code Generator
 
-A **Multi-Agent Orchestrator** for autonomous parametric CAD code generation using [build123d](https://build123d.readthedocs.io/) and Claude via Azure MaaS.
+A **Multi-Agent Orchestrator** for autonomous parametric CAD code generation using [build123d](https://build123d.readthedocs.io/).
 
 Project landing page: [https://cadstudios.org/](https://cadstudios.org/)
 
@@ -17,8 +17,8 @@ build123d_cad "Create a parametric flange with 8 bolt holes, configurable diamet
 This company wasn't developed in a slow, corporate R&D vacuum. The founding team behind CAD Studios coalesced at the high-stakes Mistral Paris Hackathon, where the VibeCAD engine was originally born.
 
 - **Hamze Ghalebi**  
-  *AI Infrastructure & Rust*  
-  Seasoned operator with C-level experience scaling complex AI platforms across the European market. Architect of the VibeCAD Rust core.  
+  *Senior Technical Product Manager, AI Infrastructure & Rust*  
+  Senior technical product manager with C-level operating experience scaling complex AI platforms across Europe, with direct ownership of the VibeCAD Rust core roadmap and architecture execution.  
   Paris, France
 
 - **Arshia Afzal**  
