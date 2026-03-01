@@ -45,6 +45,7 @@ We tested two major directions before locking the current execution path:
 - **Fine-tuning path (attempted):** We explored a fine-tuning approach for speed/consistency, but it did not produce enough measurable value for the time and compute budget available during the hackathon. We dropped it in favor of stronger orchestration prompts, better review gates, and iterative tool-driven corrections.
 - **Fine-tuning archive artifact:** The fine-tuning branch and related experiments are preserved as an archive at [github.com/hghalebi/vibecad](https://github.com/hghalebi/vibecad) for historical reference and future evaluation.
 - **Zed-style IDE path:** The Zed-style IDE flow works and those artifacts remain available in our project history, but the core product now focuses on the automated agentic loop. The default path is now auto-generation with review + self-correction, which is what we consider the primary production approach.
+- **Zed-style artifact archive:** Relevant Zed-era engineering artifacts are archived at [github.com/Anthony-Eid/zed/pull/2](https://github.com/Anthony-Eid/zed/pull/2).
 
 ## Knowledge Persistence and Policy Governance
 
