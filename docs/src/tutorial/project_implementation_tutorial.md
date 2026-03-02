@@ -1,7 +1,7 @@
 # Tutorial: How to Implement and Learn From a New Feature in this Project
 
 This document is a practical implementation playbook for this repository’s Rust+agent architecture.
-It covers concept, syntax, implementation flow, troubleshooting, and the lessons learned while building and iterating this codebase.
+It covers concept, syntax, implementation flow, troubleshooting, and the lessons learned while building and iterating this codebase, with a dedicated OpenTelemetry implementation focus.
 
 ## 1) What “implementing” means in this project
 
@@ -137,7 +137,131 @@ For every code path change:
 - Swallowing tool errors with `unwrap`/`expect`.
 - Returning markdown blobs as machine state.
 
-## 6) Troubleshooting playbook from real implementation experience
+## 6) OpenTelemetry-first implementation in this project (special focus)
+
+This repository treats observability as a design input, not an optional add-on.
+
+### 6.1 Telemetry boot sequence
+
+The entrypoint initializes telemetry before agents are created:
+
+- file: `src/main.rs`
+
+1. call `telemetry::init_telemetry(OTEL_SERVICE_NAME)`
+2. keep `TelemetryHandle` alive for process lifetime
+3. emit mission context through `rig_build123d_request` span
+4. flush on shutdown (`telemetry.shutdown()`)
+
+Why this matters:
+
+- without global initialization, spans from agents/tools are not exported
+- without proper shutdown, exporters may drop late spans under load
+
+### 6.2 Stable root span pattern
+
+Use one stable root span per objective so downstream traces are easy to query:
+
+```rust,ignore
+let mission_span = tracing::info_span!(
+    "rig_build123d_request",
+    request_id = %request_id,
+    gen_ai_provider_name = "anthropic",
+    gen_ai_system = "anthropic.azure",
+    gen_ai_operation_name = "chat.completion",
+    gen_ai_request_model = %model,
+    gen_ai_error_type = "none",
+    run_entrypoint = "cli",
+    objective_len = objective.len()
+);
+mission_span.record_model_input(&serde_json::json!({
+    "objective_preview": objective_preview,
+    "objective_len": objective.len(),
+    "workflow": "agentic_cad",
+}));
+```
+
+This is how failures can be traced as a single mission and still drill into:
+
+- `agent_orchestrator`
+- `agent_turn`
+- tool spans (`tool.*`)
+
+### 6.3 Export pipeline implementation details
+
+The project’s telemetry bootstrap is in `src/telemetry.rs` and implements:
+
+- optional OTLP enable (`OTEL_ENABLED`)
+- protocol resolution (`grpc` / `http/protobuf` / `http/json`)
+- endpoint precedence:
+  1. `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
+  2. `OTEL_EXPORTER_OTLP_ENDPOINT`
+  3. `SIGNOZ_ENDPOINT`
+- header precedence:
+  1. `OTEL_EXPORTER_OTLP_TRACES_HEADERS`
+  2. `OTEL_EXPORTER_OTLP_HEADERS`
+  3. `SIGNOZ_INGESTION_KEY`
+- compression and sampler handling
+- service-level attributes (`service.name`, `service.version`, environment, pid)
+
+### 6.4 OTel-focused implementation checklist for every new path
+
+When adding a new tool/agent feature, enforce these rules:
+
+1. Add or reuse a stable span name (low-cardinality, role-based, e.g. `agent.security_reviewer`).
+2. Add `status`, `step`, and `agent` as structured fields (not in span name).
+3. Emit `record_model_input` before risky operations and `record_model_output` at each terminal branch.
+4. Preserve redaction policy (never place raw prompts or secrets in exported fields).
+5. Ensure timeout and fallback spans exist for degraded mode.
+6. Confirm `TelemetryHandle` still owns provider until process end.
+
+### 6.5 OpenTelemetry setup examples
+
+- local:
+
+```bash
+export OTEL_ENABLED=true
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
+export OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
+export OTEL_SERVICE_NAME="build123d-cad-cli"
+export OTEL_TRACES_SAMPLER_ARG="1.0"
+```
+
+- SigNoz-compatible (cloud):
+
+```bash
+export OTEL_ENABLED=true
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://<region>.ingest.signoz.cloud:443"
+export OTEL_SERVICE_NAME="build123d-cad"
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS="signoz-ingestion-key=<key>"
+export OTEL_EXPORTER_OTLP_TRACES_COMPRESSION="gzip"
+```
+
+Fallback mode (`OTEL_ENABLED=false`) is intentional for air-gapped or local debug runs.
+
+For the complete OTEL variable matrix and collector setup examples, see [`docs/src/observability.md`](../observability.md).
+
+### 6.6 OTel troubleshooting playbook
+
+#### Symptom: no spans in backend
+
+1. confirm `init_telemetry` ran before agent initialization.
+2. verify `OTEL_ENABLED=true` and endpoint values.
+3. check protocol and header format (`OTEL_EXPORTER_OTLP_*` vs `OTEL_EXPORTER_OTLP_TRACES_*`).
+4. run `cargo run --example otel_smoke` and validate probe span.
+
+#### Symptom: spans present but context is fragmented
+
+1. verify mission-level scope is a single active root span.
+2. ensure each delegation path enters child spans consistently.
+3. avoid creating new detached spans for equivalent steps.
+
+#### Symptom: noisy span counts / high cardinality
+
+1. stop putting long/free text in span attributes.
+2. keep span names fixed and put values into attributes.
+3. reduce verbose debug logs while keeping `record_model_output` at branch boundaries only.
+
+## 7) Troubleshooting playbook from real implementation experience
 
 ### Symptom: mission loops forever
 
@@ -194,7 +318,7 @@ For every code path change:
 2. emit compact structured attributes (role, step, status).
 3. aggregate by step and model name before reacting.
 
-## 7) Learning insights from implementing this repo
+## 8) Learning insights from implementing this repo
 
 ### What worked
 
@@ -215,7 +339,7 @@ For every code path change:
 - every production path has a fallback `Broken`/manual-review representation
 - every new capability adds one traceable decision point in orchestrator
 
-## 8) Best practices for future implementation
+## 9) Best practices for future implementation
 
 1. Start with telemetry before scaling prompt complexity.
 2. Add smallest meaningful failure unit first.
@@ -225,7 +349,7 @@ For every code path change:
 6. Prefer readable control flow over clever abstractions.
 7. Write docs in the same PR as code so onboarding cost stays low.
 
-## 9) Suggested command flow
+## 10) Suggested command flow
 
 ```bash
 # run mission once
@@ -239,7 +363,7 @@ cargo test
 cargo clippy --all-targets --all-features
 ```
 
-## 10) Final checklist before merge
+## 11) Final checklist before merge
 
 - [ ] Concept is expressed in one paragraph.
 - [ ] Responsibility boundaries are explicit.
